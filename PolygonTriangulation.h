@@ -140,17 +140,34 @@ bool validEdge(const Polygon &P, std::pair<Point, Point> e){
     else return false;
 }
 // triangulate P and put the n-3 diagonals inside the parameter vector 'diagonals'
+std::vector<K::Triangle_2> findNeighbors(K::Triangle_2 triangle ,std::vector<K::Triangle_2> &triangles){
+    std::vector<K::Triangle_2> newTriangles;
+    int count;
+    for(int i = 0; i < triangles.size() || newTriangles.size() < 2; i++){
+        count = 0;
+        for(int j = 0; j < 3; j++){
+            for(int k = 0; k < 3; k++){
+                if(triangle.vertex(j) == triangles[j].vertex(k)){
+                    count++;
+                    if(count == 2){
+                        newTriangles.emplace_back(triangles[j]);
+                    }
+
+                }
+            }
+
+        }
+    }
+}
 void triangulatePolygon(const Polygon &P, std::vector<Point> &verticesOfP, std::vector<QColor> &vertexColors, std::vector<Edge> &diagonals) {
 
     typedef K::Triangle_2 Triangle;
-    Point p(0,0),q(2,2),r(4,4);
-    Triangle T(p,q,r);
 
     assert( diagonals.empty() ); // enable this when you are done
     getPolygonVertices(P,verticesOfP); // do not delete, this is needed for drawing
     std::vector<bool> clipability;
     clipability.reserve(P.size());
-    Triangle triangles;
+    std::vector<Triangle> triangles;
 
     std::vector<Point> points = verticesOfP;
     auto pointsToIdMap = createMapOfPoints(points);//hash map for getting ids from points
@@ -161,31 +178,24 @@ void triangulatePolygon(const Polygon &P, std::vector<Point> &verticesOfP, std::
     for(unsigned i = 0; points.size() > 3 && i < verticesOfP.size(); i++){
         if(isClipable(P, points, i)){
             diagonals.emplace_back(pointsToIdMap[getItem(points, i - 1)], pointsToIdMap[getItem(points, i + 1)]);
+            triangles.emplace_back(Triangle(getItem(points, i-1),getItem(points, i+1),getItem(points, i)));
             points.erase(points.begin() + i);
             i = -1;
         }
     }
-//    for(unsigned i = 0; points.size() > 3 && i < verticesOfP.size(); i++){
-//        printf("Start of loop\n");
-//        printf("i = %d\n", i);
-//        if(clipability[i]){
-//            for(auto && j : clipability){
-//                std::cout << j << std::endl;
-//            }
-//            clipability.erase(clipability.begin()+i);
-//            diagonals.emplace_back(pointsToIdMap[getItem(points, i - 1)], pointsToIdMap[getItem(points, i + 1)]);
-//            points.erase(points.begin() + i);
-//            if(points.size() <= 3){
-//                break;
-//            }
-//            clipability[i] = isClipable(P, points, i);
-//            clipability[i+1] = isClipable(P, points, i+1);
-//            i = -1;
-//        }
-//        printf("end of loop\n");
-//    }
     assert( diagonals.size() == P.size() - 3 ); // uncomment when you are done for wellness checking
-//    vertexColors[0] = Qt::red; //3-coloring not implemented
+
+    std::vector<std::pair<Triangle, std::vector<Triangle>>> triangles2;
+    std::vector<Triangle> neighbors;
+    neighbors = findNeighbors(triangles[0], triangles);
+
+
+    vertexColors[pointsToIdMap[triangles[triangles.size()-1].vertex(0)]] = Qt::red;
+    std::cout << pointsToIdMap[triangles[triangles.size()-1].vertex(0)] << std::endl;
+    vertexColors[pointsToIdMap[triangles[triangles.size()-1].vertex(1)]] = Qt::blue;
+    std::cout << pointsToIdMap[triangles[triangles.size()-1].vertex(1)] << std::endl;
+    vertexColors[pointsToIdMap[triangles[triangles.size()-1].vertex(2)]] = Qt::darkGreen;
+    std::cout << pointsToIdMap[triangles[triangles.size()-1].vertex(2)] << std::endl;
 }
 bool isClipable(const Polygon &P, std::vector<Point> &points, unsigned i){
     if(CGAL::orientation(getItem(points, i-1), getItem(points, i), getItem(points,i+1)) == CGAL::LEFT_TURN && validEdge(P, std::pair<Point, Point>(getItem(points, i-1), getItem(points, i+1)))){
